@@ -425,7 +425,7 @@ tr.row-ex td{background:#E6F1FB33;}
       <span class="nb-name">Haven MD</span>
     </div>
     <div class="nb-tabs">
-      <div class="nt" onclick="go(0,this)"><span class="nt-ico">📅</span>Calendar · 달력</div>
+      <div class="nt" id="nt-calendar" onclick="go(0,this)"><span class="nt-ico">📅</span>Calendar · 달력</div>
       <div class="nt" onclick="go(1,this)"><span class="nt-ico">➕</span>Issue · 발급</div>
       <div class="nt" onclick="go(3,this)"><span class="nt-ico">📋</span>MD Roster · 출석 <span class="nb-badge" id="nb-badge" style="display:none">0</span></div>
       <div class="nt" onclick="go(2,this)"><span class="nt-ico">📊</span>MD Status · 현황</div>
@@ -803,7 +803,8 @@ function applyRole(r, name){
   document.getElementById('cal-admin-btns').style.display = adm?'flex':'none';
   document.getElementById('nt-teachers').style.display = adm?'flex':'none';
   document.getElementById('nt-roster').style.display = adm?'flex':'none';
-  if(!adm && (curPage===5||curPage===6)) go(0, document.querySelectorAll('.nt')[0]);
+  document.getElementById('nt-calendar').style.display = adm?'flex':'none';
+  if(!adm && (curPage===5||curPage===6||curPage===0)) go(1, document.querySelectorAll('.nt')[1]);
   if(!adm){ var s=ssrt&&send?'학사 기간: '+ssrt+' ~ '+send:'학사 기간이 설정되지 않았습니다.'; document.getElementById('cal-readonly-txt').textContent=s; }
   bAddedList(); bStatus(); bRoster();
 }
