@@ -540,7 +540,7 @@ tr.row-ex td{background:#E6F1FB33;}
       <div class="content">
         <div class="slip">
           <div class="slip-hdr">
-            <div class="slip-title">HAVEN DETENTION SLIP</div>
+            <div class="slip-title"><div id="slip-term-lbl" style="font-size:9px;font-weight:600;font-style:normal;letter-spacing:.06em;opacity:.85;margin-bottom:1px"></div>HAVEN DETENTION SLIP</div>
             <div class="slip-date"><span>DATE · 날짜</span><input type="date" id="f-date" onchange="autoMD()"></div>
           </div>
           <div class="slip-body">
@@ -919,6 +919,7 @@ function loadTerm(t){
   document.getElementById('term-sem').value=t.slice(4);
   document.getElementById('sem-s').value=ssrt;
   document.getElementById('sem-e').value=send;
+  document.getElementById('slip-term-lbl').textContent=t;
   uSDL(); rNH(); rSH(); rXS(); rTermList();
 }
 function onTermChange(){
