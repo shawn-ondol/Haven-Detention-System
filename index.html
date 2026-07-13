@@ -938,12 +938,36 @@ function rTermList(){
   keys.forEach(function(k){
     var d=termData[k];
     var range=d.ssrt&&d.send?fmt(d.ssrt)+' ~ '+fmt(d.send):'기간 미설정 · No period set';
-    h+='<div class="archive-card"><div><div style="font-size:13px;font-weight:600">'+k+(k===curTerm?' <span class="pill p-bl" style="margin-left:4px">Current · 현재</span>':'')+'</div><div style="font-size:11px;color:var(--t2)">'+range+'</div></div><button class="btn-sm" onclick="jumpToTerm(\''+k+'\')">보기 · View</button></div>';
+    h+='<div class="archive-card"><div><div style="font-size:13px;font-weight:600">'+k+(k===curTerm?' <span class="pill p-bl" style="margin-left:4px">Current · 현재</span>':'')+'</div><div style="font-size:11px;color:var(--t2)">'+range+'</div></div><div style="display:flex;gap:4px"><button class="btn-sm" onclick="jumpToTerm(\''+k+'\')">보기 · View</button><button class="btn-sm btn-del" onclick="deleteTerm(\''+k+'\')">삭제 · Delete</button></div></div>';
   });
   w.innerHTML=h;
 }
+async function deleteTerm(t){
+  if(!confirm(t+' 학기 설정을 삭제할까요? · Delete this semester\'s setup?')) return;
+  var res = await sb.from('terms').delete().eq('term_id', t);
+  if(res.error){ sbErr(res.error); return; }
+  delete termData[t];
+  if(t===curTerm){
+    var now=new Date(), y=now.getFullYear(), cur=y+(now.getMonth()<7?'SS':'FW');
+    curTerm=cur; loadTerm(cur);
+  } else {
+    rTermList();
+  }
+}
+function termsOverlap(t){
+  return Object.keys(termData).find(function(k){
+    if(k===t) return false;
+    var o=termData[k];
+    if(!o.ssrt||!o.send) return false;
+    return ssrt<=o.send && o.ssrt<=send;
+  });
+}
 async function saveCalSetup(){
   if(ssrt&&send&&ssrt>send){ alert('시작일이 종료일보다 늦습니다. · Start date is after end date.'); return; }
+  if(ssrt&&send){
+    var conflict=termsOverlap(curTerm);
+    if(conflict){ alert('다른 학기('+conflict+')와 기간이 겹칩니다. 날짜를 다시 확인해주세요.\n· This period overlaps with '+conflict+'. Please adjust the dates.'); return; }
+  }
   snapTerm();
   var d=termData[curTerm];
   var res = await sb.from('terms').upsert({term_id:curTerm, start_date:d.ssrt||null, end_date:d.send||null, school_holidays:d.shols, added_holidays:d.addNH, removed_holidays:d.remNH, extra_saturdays:d.extraSD}, {onConflict:'term_id'});
