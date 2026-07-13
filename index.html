@@ -425,7 +425,7 @@ tr.row-ex td{background:#E6F1FB33;}
       <span class="nb-name">Detention</span>
     </div>
     <div class="nb-tabs">
-      <div class="nt" id="nt-calendar" onclick="go(0,this)"><span class="nt-ico">📅</span>Calendar · 달력</div>
+      <div class="nt" id="nt-calendar" onclick="go(0,this)"><span class="nt-ico">📅</span>Semester Setup · 학기 설정</div>
       <div class="nt" onclick="go(1,this)"><span class="nt-ico">➕</span>Issue · 발급</div>
       <div class="nt" onclick="go(3,this)"><span class="nt-ico">📋</span>MD Roster · 출석 <span class="nb-badge" id="nb-badge" style="display:none">0</span></div>
       <div class="nt" onclick="go(2,this)"><span class="nt-ico">📊</span>MD Status · 현황</div>
@@ -444,10 +444,10 @@ tr.row-ex td{background:#E6F1FB33;}
 
   <div class="main">
 
-    <!-- ══════ PAGE 0: Calendar ══════ -->
+    <!-- ══════ PAGE 0: Semester Setup ══════ -->
     <div class="page" id="p0">
       <div class="subbar">
-        <div class="sb-left"><div class="sb-title">School Calendar Setup · 학사 일정 설정</div><div class="sb-sub">학사 기간 설정 및 휴일 관리 · Semester period &amp; holiday management</div></div>
+        <div class="sb-left"><div class="sb-title">Semester Setup · 학기 설정</div><div class="sb-sub">학사 기간 설정 및 휴일 관리 · Semester period &amp; holiday management</div></div>
         <div class="sb-right" id="cal-admin-btns">
           <button class="btn btn-p" onclick="saveCalSetup()">💾 저장 · Save</button>
           <button class="btn btn-warn" onclick="openArchiveModal()" title="학기 아카이브 · Archive">📦 Archive</button>
@@ -519,6 +519,7 @@ tr.row-ex td{background:#E6F1FB33;}
             </div>
           </div>
 
+          <div id="term-list"></div>
           <div id="arch-list"></div>
         </div>
         <div id="cal-readonly-content" style="display:none">
@@ -918,11 +919,28 @@ function loadTerm(t){
   document.getElementById('term-sem').value=t.slice(4);
   document.getElementById('sem-s').value=ssrt;
   document.getElementById('sem-e').value=send;
-  uSDL(); rNH(); rSH(); rXS();
+  uSDL(); rNH(); rSH(); rXS(); rTermList();
 }
 function onTermChange(){
   var t=document.getElementById('term-year').value + document.getElementById('term-sem').value;
   snapTerm(); curTerm=t; loadTerm(curTerm);
+}
+function jumpToTerm(t){
+  document.getElementById('term-year').value=t.slice(0,4);
+  document.getElementById('term-sem').value=t.slice(4);
+  onTermChange();
+}
+function rTermList(){
+  var w=document.getElementById('term-list'); if(!w) return;
+  var keys=Object.keys(termData).sort();
+  if(!keys.length){ w.innerHTML=''; return; }
+  var h='<div class="sec-label" style="margin-top:8px">Configured semesters · 설정된 학기 ('+keys.length+')</div>';
+  keys.forEach(function(k){
+    var d=termData[k];
+    var range=d.ssrt&&d.send?fmt(d.ssrt)+' ~ '+fmt(d.send):'기간 미설정 · No period set';
+    h+='<div class="archive-card"><div><div style="font-size:13px;font-weight:600">'+k+(k===curTerm?' <span class="pill p-bl" style="margin-left:4px">Current · 현재</span>':'')+'</div><div style="font-size:11px;color:var(--t2)">'+range+'</div></div><button class="btn-sm" onclick="jumpToTerm(\''+k+'\')">보기 · View</button></div>';
+  });
+  w.innerHTML=h;
 }
 async function saveCalSetup(){
   if(ssrt&&send&&ssrt>send){ alert('시작일이 종료일보다 늦습니다. · Start date is after end date.'); return; }
@@ -930,7 +948,8 @@ async function saveCalSetup(){
   var d=termData[curTerm];
   var res = await sb.from('terms').upsert({term_id:curTerm, start_date:d.ssrt||null, end_date:d.send||null, school_holidays:d.shols, added_holidays:d.addNH, removed_holidays:d.remNH, extra_saturdays:d.extraSD}, {onConflict:'term_id'});
   if(res.error){ sbErr(res.error); return; }
-  alert(curTerm+' 학기 설정이 저장되었습니다. · Calendar setup saved for '+curTerm+'.');
+  rTermList();
+  alert(curTerm+' 학기 설정이 저장되었습니다. · Semester setup saved for '+curTerm+'.');
 }
 function initTerms(){
   var now=new Date(), y=now.getFullYear(), cur=y+(now.getMonth()<7?'SS':'FW');
