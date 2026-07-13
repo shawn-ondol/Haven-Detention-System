@@ -919,7 +919,6 @@ function loadTerm(t){
   document.getElementById('term-sem').value=t.slice(4);
   document.getElementById('sem-s').value=ssrt;
   document.getElementById('sem-e').value=send;
-  document.getElementById('slip-term-lbl').textContent=t;
   uSDL(); rNH(); rSH(); rXS(); rTermList();
 }
 function onTermChange(){
@@ -1234,7 +1233,13 @@ async function rosterSaveEdits(){
   bStuRoster();
   rosterMsg('수정 사항이 저장되었습니다 · Changes saved');
 }
-function autoMD(){ var d=document.getElementById('f-date').value; if(d) document.getElementById('f-mdate').value=nextSD(d); }
+function updateSlipTermLbl(d){
+  var lbl=document.getElementById('slip-term-lbl'); if(!lbl) return;
+  if(!d){ lbl.textContent=''; return; }
+  var found=Object.keys(termData).find(function(k){ var t=termData[k]; return t.ssrt && t.send && d>=t.ssrt && d<=t.send; });
+  lbl.textContent=found||'';
+}
+function autoMD(){ var d=document.getElementById('f-date').value; if(d) document.getElementById('f-mdate').value=nextSD(d); updateSlipTermLbl(d); }
 function tCb(cb){ var l=cb.closest('label'); if(cb.checked) l.classList.add('on'); else l.classList.remove('on'); }
 function gCkd(prefix){ var r=[]; document.querySelectorAll('#'+(prefix||'f-')+'rg input:checked').forEach(function(c){r.push(c.value);}); return r; }
 async function sub(more){
@@ -1263,7 +1268,7 @@ function resetForm(){
   ['f-name','f-givenby','f-detail'].forEach(function(id){document.getElementById(id).value='';});
   document.getElementById('f-grade').value=''; document.getElementById('f-class').value=''; document.getElementById('f-grade-lbl').textContent='G—'; document.getElementById('f-period').value='';
   document.getElementById('f-recby').value = curUser?curUser.name:'';
-  var t=new Date().toISOString().split('T')[0]; document.getElementById('f-date').value=t; document.getElementById('f-mdate').value=nextSD(t);
+  var t=new Date().toISOString().split('T')[0]; document.getElementById('f-date').value=t; document.getElementById('f-mdate').value=nextSD(t); updateSlipTermLbl(t);
   document.querySelectorAll('#f-rg input').forEach(function(cb){cb.checked=false;cb.closest('label').classList.remove('on');});
 }
 function resetFormKeepDate(){
@@ -1620,6 +1625,7 @@ async function loadAllData(){
   rArchList();
   var t=document.getElementById('f-date').value || new Date().toISOString().split('T')[0];
   document.getElementById('f-mdate').value=nextSD(t);
+  updateSlipTermLbl(t);
 }
 
 /* ═══════════════════════════════════════════════════════════
