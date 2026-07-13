@@ -637,11 +637,16 @@ tr.row-ex td{background:#E6F1FB33;}
         <div class="card">
           <div class="tbl-wrap">
             <table>
-              <thead><tr>
-                <th>Morning date<span class="th-ko">등교일</span></th><th>Student<span class="th-ko">학생</span></th><th>Grade/Class<span class="th-ko">학년·반</span></th><th>Reason<span class="th-ko">사유</span></th><th>Given by<span class="th-ko">발급자</span></th>
-                <th class="tc">Attended<span class="th-ko">출석</span></th><th class="tc">Packet<span class="th-ko">패킷</span></th><th class="tc">Action<span class="th-ko">조치</span></th><th>Supervisor<span class="th-ko">감독교사</span></th>
-              </tr></thead>
-              <tbody id="ro-body"><tr><td colspan="9" class="empty-msg">No records yet · 기록이 없습니다</td></tr></tbody>
+              <thead>
+                <tr>
+                  <th rowspan="2">Morning date<span class="th-ko">등교일</span></th><th rowspan="2">Student<span class="th-ko">학생</span></th><th rowspan="2">Grade/Class<span class="th-ko">학년·반</span></th><th rowspan="2">Reason<span class="th-ko">사유</span></th><th rowspan="2">Given by<span class="th-ko">발급자</span></th>
+                  <th class="tc" rowspan="2">Attended<span class="th-ko">출석</span></th><th class="tc" colspan="2">Packet Completion<span class="th-ko">패킷 완료</span></th><th class="tc" rowspan="2">Action<span class="th-ko">조치</span></th><th rowspan="2">Supervisor<span class="th-ko">감독교사</span></th>
+                </tr>
+                <tr>
+                  <th class="tc">On time<span class="th-ko">정시</span></th><th class="tc">After hours<span class="th-ko">사후</span></th>
+                </tr>
+              </thead>
+              <tbody id="ro-body"><tr><td colspan="10" class="empty-msg">No records yet · 기록이 없습니다</td></tr></tbody>
             </table>
           </div>
         </div>
@@ -999,7 +1004,7 @@ async function doArchive(){
   var nm=document.getElementById('arch-name').value.trim(); if(!nm){alert('학기 이름을 입력해주세요.');return;}
   var total=recs.length, stus=(function(){var s={};recs.forEach(function(r){s[r.name]=1;});return Object.keys(s).length;})();
   var snapRecs=recs.map(function(r){return {name:r.name,grade:r.grade,cls:r.cls,givenBy:r.givenBy,recordedBy:r.recordedBy,date:r.date,period:r.period,reasons:r.reasons,detail:r.detail,isAuto:r.isAuto};});
-  var snapRows=mrows.map(function(m){return {date:m.date,status:m.status,attended:m.attended,packet:m.packet,supervisor:m.supervisor};});
+  var snapRows=mrows.map(function(m){return {date:m.date,status:m.status,attended:m.attended,packetOnTime:m.packetOnTime,packetAfterHours:m.packetAfterHours,supervisor:m.supervisor};});
   var ares = await sb.from('archives').insert({name:nm, total_count:total, student_count:stus, detentions_snapshot:snapRecs, md_rows_snapshot:snapRows}).select().single();
   if(ares.error){ sbErr(ares.error); return; }
   var ids=recs.map(function(r){return r._sid;}).filter(Boolean);
@@ -1188,7 +1193,7 @@ async function sub(more){
   if(md){
     var mres = await sb.from('md_rows').insert({detention_id:rec._sid, md_date:md, status:'active'}).select().single();
     if(mres.error){ sbErr(mres.error); return; }
-    mrows.push({recIdx:idx,date:md,status:'active',rowId:nrid++,_sid:mres.data.id,attended:false,packet:false,supervisor:''});
+    mrows.push({recIdx:idx,date:md,status:'active',rowId:nrid++,_sid:mres.data.id,attended:false,packetOnTime:false,packetAfterHours:false,supervisor:''});
   }
   bAll(); bAddedList();
   if(!more){ resetForm(); go(2, document.querySelectorAll('.nt')[3]); }
@@ -1256,7 +1261,7 @@ async function saveEdit(){
   } else if(nd){
     var ires = await sb.from('md_rows').insert({detention_id:r._sid, md_date:nd, status:'active'}).select().single();
     if(ires.error){ sbErr(ires.error); return; }
-    mrows.push({recIdx:editIdx,date:nd,status:'active',rowId:nrid++,_sid:ires.data.id,attended:false,packet:false,supervisor:''});
+    mrows.push({recIdx:editIdx,date:nd,status:'active',rowId:nrid++,_sid:ires.data.id,attended:false,packetOnTime:false,packetAfterHours:false,supervisor:''});
   }
   closeModal('edit-modal'); bAll(); bAddedList();
 }
@@ -1283,10 +1288,10 @@ async function hSkip(id){
   if(re){
     var ins1 = await sb.from('md_rows').insert({detention_id:recs[row.recIdx]._sid, md_date:re, status:'active', rescheduled_from:row._sid}).select().single();
     if(ins1.error){ sbErr(ins1.error); return; }
-    var reId=nrid++; mrows.splice(i+1,0,{recIdx:row.recIdx,date:re,status:'active',rowId:reId,_sid:ins1.data.id,attended:false,packet:false,supervisor:''}); u.reRowId=reId;
+    var reId=nrid++; mrows.splice(i+1,0,{recIdx:row.recIdx,date:re,status:'active',rowId:reId,_sid:ins1.data.id,attended:false,packetOnTime:false,packetAfterHours:false,supervisor:''}); u.reRowId=reId;
   }
   var orig=recs[row.recIdx];
-  var autoRec={name:orig.name,grade:orig.grade,cls:orig.cls,givenBy:'auto',date:sd,period:'ETC',reasons:['MD Skip'],detail:'Auto: MD skip on '+sd,isAuto:true};
+  var autoRec={name:orig.name,grade:orig.grade,cls:orig.cls,givenBy:'auto',date:sd,period:'ETC',reasons:['MD Skip'],detail:fmt(sd)+'('+sd+') MD를 결석(스킵)하여 자동 발급됨 · Auto-issued for skipping the '+fmt(sd)+' MD',isAuto:true};
   var dins = await sb.from('detentions').insert({student_name:autoRec.name, grade:autoRec.grade, class:autoRec.cls, given_by:autoRec.givenBy, issue_date:autoRec.date, period:autoRec.period, reasons:autoRec.reasons, detail:autoRec.detail, is_auto:true}).select().single();
   if(dins.error){ sbErr(dins.error); return; }
   autoRec._sid=dins.data.id;
@@ -1296,7 +1301,7 @@ async function hSkip(id){
   if(autoMd){
     var ins2 = await sb.from('md_rows').insert({detention_id:autoRec._sid, md_date:autoMd, status:'active'}).select().single();
     if(ins2.error){ sbErr(ins2.error); return; }
-    var autoRowId=nrid++; mrows.push({recIdx:vi,date:autoMd,status:'active',rowId:autoRowId,_sid:ins2.data.id,attended:false,packet:false,supervisor:''}); u.autoRowId=autoRowId;
+    var autoRowId=nrid++; mrows.push({recIdx:vi,date:autoMd,status:'active',rowId:autoRowId,_sid:ins2.data.id,attended:false,packetOnTime:false,packetAfterHours:false,supervisor:''}); u.autoRowId=autoRowId;
   }
   row.undo=u;
   if(!re||!autoMd) alert('학기 내 남은 등교일이 부족하여 일부 MD는 배정되지 않았습니다 (기록만 저장).\n· Not enough school days left this semester — some MDs saved as record only.');
@@ -1348,7 +1353,7 @@ async function hExc(id){
   if(re2){
     var ins = await sb.from('md_rows').insert({detention_id:recs[row.recIdx]._sid, md_date:re2, status:'active', rescheduled_from:row._sid}).select().single();
     if(ins.error){ sbErr(ins.error); return; }
-    var reId2=nrid++; mrows.splice(i+1,0,{recIdx:row.recIdx,date:re2,status:'active',rowId:reId2,_sid:ins.data.id,attended:false,packet:false,supervisor:''}); row.undo={reRowId:reId2};
+    var reId2=nrid++; mrows.splice(i+1,0,{recIdx:row.recIdx,date:re2,status:'active',rowId:reId2,_sid:ins.data.id,attended:false,packetOnTime:false,packetAfterHours:false,supervisor:''}); row.undo={reRowId:reId2};
   } else { row.undo={}; alert('학기 내 남은 등교일이 없어 재배정 없이 처리되었습니다.\n· No school days left this semester — no reschedule.'); }
   bAll();
 }
@@ -1359,6 +1364,16 @@ async function saveAtt(rowId, field, value){
   var patch={}; patch[field]= field==='supervisor' ? value : !!value;
   var res = await sb.from('md_rows').update(patch).eq('id', row._sid);
   if(res.error) sbErr(res.error);
+}
+async function savePacket(rowId, which, checked){
+  var i=fRow(rowId); if(i===-1) return;
+  var row=mrows[i];
+  var onTime = which==='onTime' ? checked : (checked ? false : row.packetOnTime);
+  var afterHours = which==='afterHours' ? checked : (checked ? false : row.packetAfterHours);
+  var res = await sb.from('md_rows').update({packet_on_time:onTime, packet_after_hours:afterHours}).eq('id', row._sid);
+  if(res.error){ sbErr(res.error); return; }
+  row.packetOnTime=onTime; row.packetAfterHours=afterHours;
+  bRoster();
 }
 function markAll(){
   document.querySelectorAll('#ro-body input[data-att]').forEach(function(cb){ if(!cb.checked){ cb.checked=true; cb.dispatchEvent(new Event('change')); } });
@@ -1462,22 +1477,26 @@ function bRoster(){
   var badge=document.getElementById('nb-badge'); badge.textContent=activeTot; badge.style.display=activeTot>0?'inline':'none';
   var page=filtered.slice(roOff,roOff+RO_PER);
   var tb=document.getElementById('ro-body'); tb.innerHTML='';
-  if(!filtered.length){ tb.innerHTML='<tr><td colspan="9" class="empty-msg">'+(fd?'No students on this date · 해당 날짜에 등록된 학생이 없습니다':'No records yet · 기록이 없습니다')+'</td></tr>'; return; }
+  if(!filtered.length){ tb.innerHTML='<tr><td colspan="10" class="empty-msg">'+(fd?'No students on this date · 해당 날짜에 등록된 학생이 없습니다':'No records yet · 기록이 없습니다')+'</td></tr>'; return; }
   page.forEach(function(row){
     var r=recs[row.recIdx], done=row.status!=='active', auto=r.isAuto;
     var bdg=r.reasons.map(function(x){return '<span class="pill '+(x==='MD Skip'?'p-sk':'p-ac')+'">'+x+'</span>';}).join(' ');
+    if(r.detail) bdg+='<div style="font-size:10px;color:var(--t3);margin-top:2px">'+r.detail+'</div>';
     var tr=document.createElement('tr'); tr.className=row.status==='skipped'?'row-sk':row.status==='excused'?'row-ex':'hover-row';
     var dh='<span'+(done?' style="text-decoration:line-through;opacity:.55"':'')+'>'+fmt(row.date)+'</span>';
     if(row.status==='skipped') dh+=' <span class="badge-sk">Skipped · 스킵</span>';
     if(row.status==='excused') dh+=' <span class="badge-ex">Excused · 인정</span>';
+    var editBtn=(role==='admin'&&!auto)?'<button class="btn-sm btn-edit" onclick="openEdit('+row.recIdx+')">Edit · 수정</button>':'';
     var ah=row.status==='skipped'?'<button class="btn-sm" onclick="undoSkip('+row.rowId+')">↩ Undo · 되돌리기</button>':row.status==='excused'?'<button class="btn-sm" onclick="undoExc('+row.rowId+')">↩ Undo · 되돌리기</button>':done?'—':'<div style="display:flex;gap:4px;justify-content:center"><button class="btn-sm btn-skip" onclick="hSkip('+row.rowId+')">Skip</button><button class="btn-sm btn-exc" onclick="hExc('+row.rowId+')">Excused</button></div>';
+    if(editBtn) ah='<div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap">'+editBtn+ah+'</div>';
     tr.innerHTML='<td style="white-space:nowrap">'+dh+'</td>'+
       '<td><span class="name-link" onclick="openHist(\''+r.name+'\')">'+r.name+'</span>'+(auto?' <span class="auto-tag">(auto)</span>':'')+'</td>'+
       '<td style="font-size:11px;color:var(--t2)">G'+r.grade+' '+r.cls+'</td>'+
       '<td>'+bdg+'</td>'+
       '<td style="font-size:11px">'+(auto?'<span class="auto-tag">auto</span>':(r.givenBy||'—'))+'</td>'+
       '<td class="tc">'+(done?'—':'<input type="checkbox" data-att="1" '+(row.attended?'checked':'')+' onchange="saveAtt('+row.rowId+',\'attended\',this.checked)" style="width:14px;height:14px;accent-color:var(--gr)">')+'</td>'+
-      '<td class="tc">'+(done?'—':'<input type="checkbox" '+(row.packet?'checked':'')+' onchange="saveAtt('+row.rowId+',\'packet\',this.checked)" style="width:14px;height:14px;accent-color:var(--gr)">')+'</td>'+
+      '<td class="tc">'+(done?'—':'<input type="checkbox" '+(row.packetOnTime?'checked':'')+' onchange="savePacket('+row.rowId+',\'onTime\',this.checked)" style="width:14px;height:14px;accent-color:var(--gr)">')+'</td>'+
+      '<td class="tc">'+(done?'—':'<input type="checkbox" '+(row.packetAfterHours?'checked':'')+' onchange="savePacket('+row.rowId+',\'afterHours\',this.checked)" style="width:14px;height:14px;accent-color:var(--gr)">')+'</td>'+
       '<td class="tc">'+ah+'</td>'+
       '<td>'+(done?'—':'<input type="text" placeholder="Name · 이름" value="'+(row.supervisor||'').replace(/"/g,'&quot;')+'" onchange="saveAtt('+row.rowId+',\'supervisor\',this.value)" style="font-size:11px;height:26px">')+'</td>';
     tb.appendChild(tr);
@@ -1531,7 +1550,7 @@ async function loadAllData(){
   var idIdx={}; recs.forEach(function(r,i){ idIdx[r._sid]=i; });
   nrid=0;
   mrows = (mdRes.data||[]).filter(function(r){ return idIdx[r.detention_id]!==undefined; }).map(function(r){
-    return {_sid:r.id, recIdx:idIdx[r.detention_id], date:r.md_date, status:r.status, attended:!!r.attended, packet:!!r.packet, supervisor:r.supervisor||'', rowId:nrid++};
+    return {_sid:r.id, recIdx:idIdx[r.detention_id], date:r.md_date, status:r.status, attended:!!r.attended, packetOnTime:!!r.packet_on_time, packetAfterHours:!!r.packet_after_hours, supervisor:r.supervisor||'', rowId:nrid++};
   });
 
   if(archRes.error) throw archRes.error;
