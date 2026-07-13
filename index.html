@@ -50,7 +50,8 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--acm);outline-off
 .shell{display:flex;flex-direction:column;min-height:100vh;}
 .navbar{background:var(--nav);display:flex;align-items:center;padding:0 20px;height:50px;flex-shrink:0;gap:0;position:sticky;top:0;z-index:100;}
 .nb-brand{display:flex;align-items:center;gap:9px;margin-right:26px;flex-shrink:0;}
-.nb-icon{width:30px;height:30px;border-radius:7px;background:var(--acm);display:flex;align-items:center;justify-content:center;font-size:16px;}
+.nb-icon{width:30px;height:30px;border-radius:7px;background:var(--acm);display:flex;align-items:center;justify-content:center;font-size:16px;overflow:hidden;}
+.nb-icon img{width:100%;height:100%;object-fit:contain;}
 .nb-name{font-size:14px;font-weight:600;color:#F0EDE8;letter-spacing:.02em;}
 .nb-tabs{display:flex;align-items:stretch;flex:1;height:100%;overflow-x:auto;}
 .nb-tabs::-webkit-scrollbar{display:none;}
@@ -294,7 +295,8 @@ tr.row-ex td{background:#E6F1FB33;}
 /* ═══ AUTH ═══ */
 .auth{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:2000;padding:20px;}
 .auth-card{background:var(--surf);border:0.5px solid var(--b1);border-radius:14px;box-shadow:0 8px 40px rgba(60,56,45,.10);width:400px;max-width:100%;padding:34px 34px 26px;}
-.auth-logo{width:52px;height:52px;border-radius:13px;background:var(--acm);display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 14px;}
+.auth-logo{width:52px;height:52px;border-radius:13px;background:var(--acm);display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 14px;overflow:hidden;}
+.auth-logo img{width:100%;height:100%;object-fit:contain;}
 .auth-title{text-align:center;font-size:21px;font-weight:700;color:var(--t1);letter-spacing:.01em;}
 .auth-sub{text-align:center;font-size:12px;color:var(--t3);margin:5px 0 20px;}
 .auth-tabs{display:flex;border:0.5px solid var(--b2);border-radius:8px;overflow:hidden;margin-bottom:18px;}
@@ -314,7 +316,7 @@ tr.row-ex td{background:#E6F1FB33;}
 <!-- ════ AUTH SCREEN ════ -->
 <div class="auth" id="auth">
   <div class="auth-card">
-    <div class="auth-logo">🛡</div>
+    <div class="auth-logo"><img src="brand_logo/logo.png" alt="Haven Christian School"></div>
     <h1 class="auth-title">Haven MH Detention System</h1>
     <div class="auth-sub">중고등 디텐션 관리 시스템</div>
     <div class="auth-tabs">
@@ -419,7 +421,7 @@ tr.row-ex td{background:#E6F1FB33;}
   <!-- Navbar -->
   <nav class="navbar">
     <div class="nb-brand">
-      <div class="nb-icon">🛡</div>
+      <div class="nb-icon"><img src="brand_logo/logo.png" alt="Haven Christian School"></div>
       <span class="nb-name">Haven MD</span>
     </div>
     <div class="nb-tabs">
