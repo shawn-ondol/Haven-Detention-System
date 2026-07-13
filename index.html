@@ -461,7 +461,13 @@ tr.row-ex td{background:#E6F1FB33;}
             <div style="background:var(--nav);border-radius:10px;padding:16px;color:#F0EDE8;display:flex;flex-direction:column;gap:14px">
               <div>
                 <div style="font-size:10px;letter-spacing:.08em;opacity:.55;text-transform:uppercase;margin-bottom:5px">Semester · 설정 학기</div>
-                <input type="text" id="term-sel" onchange="onTermChange()" style="width:100%;font-weight:700;font-size:14px;background:#3A3833;color:#F0C898;border:0.5px solid rgba(255,255,255,.2)">
+                <div style="display:flex;gap:6px">
+                  <select id="term-year" onchange="onTermChange()" style="flex:1;font-weight:700;font-size:14px;background:#3A3833;color:#F0C898;border:0.5px solid rgba(255,255,255,.2)"></select>
+                  <select id="term-sem" onchange="onTermChange()" style="width:74px;font-weight:700;font-size:14px;background:#3A3833;color:#F0C898;border:0.5px solid rgba(255,255,255,.2)">
+                    <option value="SS">SS</option>
+                    <option value="FW">FW</option>
+                  </select>
+                </div>
                 <div style="font-size:10px;opacity:.5;margin-top:6px;line-height:1.5">SS = 3월–7월 · FW = 8월–1월</div>
               </div>
               <div>
@@ -908,13 +914,14 @@ function loadTerm(t){
   var d=termData[t];
   if(d){ ssrt=d.ssrt; send=d.send; shols=d.shols.slice(); addNH=JSON.parse(JSON.stringify(d.addNH)); remNH=d.remNH.slice(); extraSD=(d.extraSD||[]).slice(); }
   else { var b=termBounds(t); ssrt=b[0]; send=b[1]; shols=[]; addNH={}; remNH=[]; extraSD=[]; }
+  document.getElementById('term-year').value=t.slice(0,4);
+  document.getElementById('term-sem').value=t.slice(4);
   document.getElementById('sem-s').value=ssrt;
   document.getElementById('sem-e').value=send;
   uSDL(); rNH(); rSH(); rXS();
 }
 function onTermChange(){
-  var t=document.getElementById('term-sel').value.trim();
-  if(!t){ document.getElementById('term-sel').value=curTerm; return; }
+  var t=document.getElementById('term-year').value + document.getElementById('term-sem').value;
   snapTerm(); curTerm=t; loadTerm(curTerm);
 }
 async function saveCalSetup(){
@@ -927,7 +934,9 @@ async function saveCalSetup(){
 }
 function initTerms(){
   var now=new Date(), y=now.getFullYear(), cur=y+(now.getMonth()<7?'SS':'FW');
-  document.getElementById('term-sel').value=cur;
+  var ySel=document.getElementById('term-year'), html='';
+  for(var yy=y; yy<=y+10; yy++){ html+='<option value="'+yy+'">'+yy+'</option>'; }
+  ySel.innerHTML=html;
   curTerm=cur; loadTerm(cur);
 }
 function onRC(){ ssrt=document.getElementById('sem-s').value; send=document.getElementById('sem-e').value; uSDL(); rNH(); rSH(); rXS(); }
