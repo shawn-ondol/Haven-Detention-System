@@ -405,7 +405,7 @@ tr.row-ex td{background:#E6F1FB33;}
       <button class="modal-close" onclick="closeModal('arch-modal')">×</button>
     </div>
     <p style="font-size:13px;color:var(--t2);line-height:1.7;margin-bottom:12px">현재 학기 데이터를 아카이브에 저장하고 초기화합니다. · Saves current semester data to the archive and resets.<br><strong style="color:var(--t1)">이 작업은 되돌릴 수 없습니다. · This cannot be undone.</strong></p>
-    <div class="field"><label>Semester name · 학기 이름 (예: 2026SS)</label><input type="text" id="arch-name" placeholder="2025 Spring"></div>
+    <div class="field"><label>Archive name · 아카이브 이름</label><div id="arch-name-preview" style="padding:6px 9px;border:0.5px solid var(--b2);border-radius:6px;font-weight:600;color:var(--t1)"></div></div>
     <div class="modal-foot">
       <button class="btn" onclick="closeModal('arch-modal')">Cancel · 취소</button>
       <button class="btn btn-danger" onclick="doArchive()">Archive &amp; reset · 아카이브 &amp; 초기화</button>
@@ -450,7 +450,7 @@ tr.row-ex td{background:#E6F1FB33;}
         <div class="sb-left"><div class="sb-title">School Calendar Setup · 학사 일정 설정</div><div class="sb-sub">학사 기간 설정 및 휴일 관리 · Semester period &amp; holiday management</div></div>
         <div class="sb-right" id="cal-admin-btns">
           <button class="btn btn-p" onclick="saveCalSetup()">💾 저장 · Save</button>
-          <button class="btn btn-warn" onclick="openModal('arch-modal')" title="학기 아카이브 · Archive">📦 Archive</button>
+          <button class="btn btn-warn" onclick="openArchiveModal()" title="학기 아카이브 · Archive">📦 Archive</button>
         </div>
       </div>
       <div class="content">
@@ -461,7 +461,7 @@ tr.row-ex td{background:#E6F1FB33;}
             <div style="background:var(--nav);border-radius:10px;padding:16px;color:#F0EDE8;display:flex;flex-direction:column;gap:14px">
               <div>
                 <div style="font-size:10px;letter-spacing:.08em;opacity:.55;text-transform:uppercase;margin-bottom:5px">Semester · 설정 학기</div>
-                <select id="term-sel" onchange="onTermChange()" style="width:100%;font-weight:700;font-size:14px;background:#3A3833;color:#F0C898;border:0.5px solid rgba(255,255,255,.2)"></select>
+                <input type="text" id="term-sel" onchange="onTermChange()" style="width:100%;font-weight:700;font-size:14px;background:#3A3833;color:#F0C898;border:0.5px solid rgba(255,255,255,.2)">
                 <div style="font-size:10px;opacity:.5;margin-top:6px;line-height:1.5">SS = 3월–7월 · FW = 8월–1월</div>
               </div>
               <div>
@@ -912,7 +912,11 @@ function loadTerm(t){
   document.getElementById('sem-e').value=send;
   uSDL(); rNH(); rSH(); rXS();
 }
-function onTermChange(){ snapTerm(); curTerm=document.getElementById('term-sel').value; loadTerm(curTerm); }
+function onTermChange(){
+  var t=document.getElementById('term-sel').value.trim();
+  if(!t){ document.getElementById('term-sel').value=curTerm; return; }
+  snapTerm(); curTerm=t; loadTerm(curTerm);
+}
 async function saveCalSetup(){
   if(ssrt&&send&&ssrt>send){ alert('시작일이 종료일보다 늦습니다. · Start date is after end date.'); return; }
   snapTerm();
@@ -923,9 +927,7 @@ async function saveCalSetup(){
 }
 function initTerms(){
   var now=new Date(), y=now.getFullYear(), cur=y+(now.getMonth()<7?'SS':'FW');
-  var sel=document.getElementById('term-sel'), html='';
-  for(var yy=y-1;yy<=y+1;yy++){ ['SS','FW'].forEach(function(s){ var t=yy+s; html+='<option value="'+t+'"'+(t===cur?' selected':'')+'>'+t+'</option>'; }); }
-  sel.innerHTML=html;
+  document.getElementById('term-sel').value=cur;
   curTerm=cur; loadTerm(cur);
 }
 function onRC(){ ssrt=document.getElementById('sem-s').value; send=document.getElementById('sem-e').value; uSDL(); rNH(); rSH(); rXS(); }
@@ -1001,8 +1003,12 @@ function rSH(){
   shols.slice().sort().forEach(function(ds){ h+='<div class="cal-li"><span>'+fmt(ds)+'</span><button class="x" onclick="tSH(\''+ds+'\')">×</button></div>'; });
   w.innerHTML=h;
 }
+function openArchiveModal(){
+  document.getElementById('arch-name-preview').textContent = curTerm+' Archive';
+  openModal('arch-modal');
+}
 async function doArchive(){
-  var nm=document.getElementById('arch-name').value.trim(); if(!nm){alert('학기 이름을 입력해주세요.');return;}
+  var nm=curTerm+' Archive';
   var total=recs.length, stus=(function(){var s={};recs.forEach(function(r){s[r.name]=1;});return Object.keys(s).length;})();
   var snapRecs=recs.map(function(r){return {name:r.name,grade:r.grade,cls:r.cls,givenBy:r.givenBy,recordedBy:r.recordedBy,date:r.date,period:r.period,reasons:r.reasons,detail:r.detail,isAuto:r.isAuto};});
   var snapRows=mrows.map(function(m){return {date:m.date,status:m.status,attended:m.attended,packetOnTime:m.packetOnTime,packetAfterHours:m.packetAfterHours,supervisor:m.supervisor};});
@@ -1012,7 +1018,7 @@ async function doArchive(){
   if(ids.length){ var dres=await sb.from('detentions').delete().in('id', ids); if(dres.error){ sbErr(dres.error); return; } }
   archives.push({name:nm,date:new Date(ares.data.archived_at).toLocaleDateString('ko-KR'),total:total,stus:stus});
   recs=[];mrows=[];nrid=0;actionDone={};stOff=0;roOff=0;suOff=0;stDates=[];suSts=[];rsnData=[];
-  closeModal('arch-modal'); document.getElementById('arch-name').value='';
+  closeModal('arch-modal');
   bAll(); rArchList();
 }
 function rArchList(){
