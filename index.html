@@ -537,7 +537,7 @@ tr.row-ex td{background:#E6F1FB33;}
         <div class="sb-left"><div class="sb-title">Issue Detention · 디텐션 발급</div><div class="sb-sub">디텐션 슬립 작성 · Fill out the detention slip</div></div>
         <div class="sb-right">
           <button class="btn" onclick="resetForm()">Clear · 초기화</button>
-          <button class="btn btn-p" onclick="sub(false)">💾 Save · 저장 →</button>
+          <button class="btn btn-p sub-btn" onclick="sub(false)">💾 Save · 저장 →</button>
         </div>
       </div>
       <div class="content">
@@ -587,8 +587,8 @@ tr.row-ex td{background:#E6F1FB33;}
           </div>
         </div>
         <div style="display:flex;gap:8px;justify-content:flex-end;max-width:780px;margin:0 auto 13px">
-          <button class="btn" onclick="sub(true)">+ Add another · 추가 발급</button>
-          <button class="btn btn-p" onclick="sub(false)">Save &amp; view · 저장 후 현황 보기 →</button>
+          <button class="btn sub-btn" onclick="sub(true)">+ Add another · 추가 발급</button>
+          <button class="btn btn-p sub-btn" onclick="sub(false)">Save &amp; view · 저장 후 현황 보기 →</button>
         </div>
         <div id="added-list"></div>
       </div>
@@ -636,12 +636,6 @@ tr.row-ex td{background:#E6F1FB33;}
           <input type="date" id="f-date-filter" onchange="bRoster()">
           <button class="btn" onclick="clearFilter()">Show all · 전체 보기</button>
           <span class="fcnt" id="fcnt"></span>
-        </div>
-        <div class="tbl-ctrl" id="ro-ctrl" style="display:none">
-          <button class="btn-nav" id="ro-prev" onclick="roScroll(-1)">◀</button>
-          <button class="btn-nav" id="ro-next" onclick="roScroll(1)">▶</button>
-          <span class="tbl-ctrl-lbl" id="ro-lbl"></span>
-          <span class="tbl-ctrl-pg" id="ro-pg"></span>
         </div>
         <div class="card">
           <div class="tbl-wrap">
@@ -742,10 +736,10 @@ Grace	Hyomin Na (나효민)	권하온
 var recs = [], mrows = [], nrid = 0, archives = [], actionDone = {}, ros = [];
 var cY, cM, ssrt = '', send = '', shols = [];
 var role = 'admin';
-var stOff = 0, roOff = 0, suOff = 0, rsnOff = 0;
-var ST_PER = 5, RO_PER = 8, SU_PER = 10, RSN_PER = 8;
+var stOff = 0, suOff = 0, rsnOff = 0;
+var ST_PER = 5, SU_PER = 10, RSN_PER = 8;
 var stDates = [], suSts = [], rsnData = [];
-var editIdx = -1;
+var editSid = null;
 var CM = {'7':['Faith','Grace'],'8':['Hope','Joy'],'9':['Mercy','Victory'],'10':['Peace','Charity'],'11':['Honor','Honesty'],'12':['Glory A','Glory B']};
 var CG = {}; Object.keys(CM).forEach(function(g){ CM[g].forEach(function(c){ CG[c]=g; }); });
 var GO = ['7','8','9','10','11','12'];
@@ -780,7 +774,7 @@ function isSD(d){ if(ssrt&&d<ssrt) return false; if(send&&d>send) return false; 
 function dAdd(d,n){ var dt=new Date(d+'T12:00:00'); if(isNaN(dt.getTime())) return d; dt.setDate(dt.getDate()+n); return dt.toISOString().split('T')[0]; }
 function fmt(d){ if(!d) return '—'; var dt=new Date(d+'T12:00:00'); return isNaN(dt.getTime())?d:dt.toLocaleDateString('ko-KR',{month:'short',day:'numeric',weekday:'short'}); }
 function nextSD(from){ var d=dAdd(from,1); for(var i=0;i<180;i++){ if(send&&d>send) return ''; if(isSD(d)) return d; d=dAdd(d,1); } return ''; }
-function nextFree(from){ var d=from; for(var i=0;i<180;i++){ if(send&&d>send) return ''; if(isSD(d)){ var t=false; for(var j=0;j<mrows.length;j++){if(mrows[j].date===d){t=true;break;}} if(!t) return d; } d=dAdd(d,1); } return ''; }
+function nextFree(from,name,cls){ var d=from; for(var i=0;i<180;i++){ if(send&&d>send) return ''; if(isSD(d)){ var t=false; for(var j=0;j<mrows.length;j++){ var m=mrows[j]; var r=recBySid(m.detId); if(m.date===d && m.status==='active' && r && r.name===name && r.cls===cls){t=true;break;} } if(!t) return d; } d=dAdd(d,1); } return ''; }
 
 /* ═══════════════════════════════════════════════════════════
    NAVIGATION
@@ -795,7 +789,7 @@ function go(n, el){
   if(n===5){ if(role!=='admin'){ return; } bTeachers(); }
   if(n===6){ if(role!=='admin'){ return; } bStuRoster(); }
   if(n===2) bStatus();
-  if(n===3){ roJumpToday(); bRoster(); }
+  if(n===3){ bRoster(); roJumpToday(); }
   if(n===1 && !document.getElementById('f-date').value){
     var t=new Date().toISOString().split('T')[0];
     document.getElementById('f-date').value=t; document.getElementById('f-mdate').value=nextSD(t); updateSlipTermLbl(t);
@@ -1075,7 +1069,7 @@ async function doArchive(){
   var ids=recs.map(function(r){return r._sid;}).filter(Boolean);
   if(ids.length){ var dres=await sb.from('detentions').delete().in('id', ids); if(dres.error){ sbErr(dres.error); return; } }
   archives.push({name:nm,date:new Date(ares.data.archived_at).toLocaleDateString('ko-KR'),total:total,stus:stus});
-  recs=[];mrows=[];nrid=0;actionDone={};stOff=0;roOff=0;suOff=0;stDates=[];suSts=[];rsnData=[];
+  recs=[];mrows=[];nrid=0;actionDone={};stOff=0;suOff=0;stDates=[];suSts=[];rsnData=[];
   closeModal('arch-modal');
   bAll(); rArchList();
 }
@@ -1096,6 +1090,7 @@ function clsPick(){
   document.getElementById('f-grade').value=g;
   document.getElementById('f-grade-lbl').textContent=g?('G'+g):'G—';
   if(document.getElementById('nm-dd').style.display==='block') nmInput();
+  autoMD();
 }
 
 /* ── Student roster store + typeahead ── */
@@ -1245,30 +1240,45 @@ function updateSlipTermLbl(d){
   var found=Object.keys(termData).find(function(k){ var t=termData[k]; return t.ssrt && t.send && d>=t.ssrt && d<=t.send; });
   lbl.textContent=found||'';
 }
-function autoMD(){ var d=document.getElementById('f-date').value; if(d) document.getElementById('f-mdate').value=nextSD(d); updateSlipTermLbl(d); }
+function autoMD(){
+  var d=document.getElementById('f-date').value;
+  if(d){
+    var nm=document.getElementById('f-name').value.trim(), cl=document.getElementById('f-class').value;
+    document.getElementById('f-mdate').value=nextFree(dAdd(d,1), nm, cl);
+  }
+  updateSlipTermLbl(d);
+}
 function tCb(cb){ var l=cb.closest('label'); if(cb.checked) l.classList.add('on'); else l.classList.remove('on'); }
 function gCkd(prefix){ var r=[]; document.querySelectorAll('#'+(prefix||'f-')+'rg input:checked').forEach(function(c){r.push(c.value);}); return r; }
+var subBusy=false;
 async function sub(more){
-  var g=document.getElementById('f-grade').value, cl=document.getElementById('f-class').value;
-  var nm=document.getElementById('f-name').value.trim(), gb=document.getElementById('f-givenby').value.trim();
-  var di=document.getElementById('f-date').value, per=document.getElementById('f-period').value;
-  var md=document.getElementById('f-mdate').value, rs=gCkd('f-'), det=document.getElementById('f-detail').value;
-  if(!nm||!g||!di||!per){alert('Grade, name, date, period를 입력해주세요.');return;}
-  if(md && send && md>send){ alert('MD 날짜가 학기 종료일 이후입니다. 기록만 저장되고 MD Roster에는 추가되지 않습니다.\n· MD date is past semester end — saved as record only.'); md=''; }
-  if(!md && !confirm('이번 학기에 남은 등교일이 없습니다. 기록만 저장하고 MD는 배정하지 않을까요?\n· No school days left this semester — save as record only (no MD)?')) return;
-  var rec={name:nm,grade:g,cls:cl,givenBy:gb,recordedBy:document.getElementById('f-recby').value.trim(),date:di,period:per,reasons:rs,detail:det,isAuto:false};
-  var dres = await sb.from('detentions').insert({student_name:rec.name, grade:rec.grade, class:rec.cls, given_by:rec.givenBy, recorded_by:rec.recordedBy, issue_date:rec.date, period:rec.period, reasons:rec.reasons, detail:rec.detail, is_auto:false}).select().single();
-  if(dres.error){ sbErr(dres.error); return; }
-  rec._sid=dres.data.id;
-  var idx=recs.length; recs.push(rec);
-  if(md){
-    var mres = await sb.from('md_rows').insert({detention_id:rec._sid, md_date:md, status:'active'}).select().single();
-    if(mres.error){ sbErr(mres.error); return; }
-    mrows.push({recIdx:idx,date:md,status:'active',rowId:nrid++,_sid:mres.data.id,attended:false,packetOnTime:false,packetAfterHours:false,supervisor:''});
+  if(subBusy) return; subBusy=true;
+  document.querySelectorAll('.sub-btn').forEach(function(b){b.disabled=true;});
+  try{
+    var g=document.getElementById('f-grade').value, cl=document.getElementById('f-class').value;
+    var nm=document.getElementById('f-name').value.trim(), gb=document.getElementById('f-givenby').value.trim();
+    var di=document.getElementById('f-date').value, per=document.getElementById('f-period').value;
+    var md=document.getElementById('f-mdate').value, rs=gCkd('f-'), det=document.getElementById('f-detail').value;
+    if(!nm||!g||!di||!per){alert('Grade, name, date, period를 입력해주세요.');return;}
+    if(md && send && md>send){ alert('MD 날짜가 학기 종료일 이후입니다. 기록만 저장되고 MD Roster에는 추가되지 않습니다.\n· MD date is past semester end — saved as record only.'); md=''; }
+    if(!md && !confirm('이번 학기에 남은 등교일이 없습니다. 기록만 저장하고 MD는 배정하지 않을까요?\n· No school days left this semester — save as record only (no MD)?')) return;
+    var rec={name:nm,grade:g,cls:cl,givenBy:gb,recordedBy:document.getElementById('f-recby').value.trim(),date:di,period:per,reasons:rs,detail:det,isAuto:false};
+    var dres = await sb.from('detentions').insert({student_name:rec.name, grade:rec.grade, class:rec.cls, given_by:rec.givenBy, recorded_by:rec.recordedBy, issue_date:rec.date, period:rec.period, reasons:rec.reasons, detail:rec.detail, is_auto:false}).select().single();
+    if(dres.error){ sbErr(dres.error); return; }
+    rec._sid=dres.data.id;
+    recs.push(rec);
+    if(md){
+      var mres = await sb.from('md_rows').insert({detention_id:rec._sid, md_date:md, status:'active'}).select().single();
+      if(mres.error){ sbErr(mres.error); return; }
+      mrows.push({detId:rec._sid,date:md,status:'active',rowId:nrid++,_sid:mres.data.id,attended:false,packetOnTime:false,packetAfterHours:false,supervisor:''});
+    }
+    bAll(); bAddedList();
+    if(!more){ resetForm(); go(2, document.querySelectorAll('.nt')[3]); }
+    else resetFormKeepDate();
+  } finally {
+    subBusy=false;
+    document.querySelectorAll('.sub-btn').forEach(function(b){b.disabled=false;});
   }
-  bAll(); bAddedList();
-  if(!more){ resetForm(); go(2, document.querySelectorAll('.nt')[3]); }
-  else resetFormKeepDate();
 }
 function resetForm(){
   ['f-name','f-givenby','f-detail'].forEach(function(id){document.getElementById(id).value='';});
@@ -1288,9 +1298,8 @@ function bAddedList(){
   if(!manual.length){el.innerHTML='';return;}
   var h='<div class="sec-label">Added · 발급됨 ('+manual.length+')</div>';
   manual.forEach(function(r){
-    var i=recs.indexOf(r);
     h+='<div class="rec-chip"><span><strong>'+r.name+'</strong> <span style="color:var(--t3)">Gr.'+r.grade+' '+r.cls+' · '+r.date+' · P'+r.period+'</span></span>';
-    if(role==='admin') h+='<div style="display:flex;gap:4px"><button class="btn-sm btn-edit" onclick="openEdit('+i+')">Edit · 수정</button><button class="btn-sm btn-del" onclick="delRec('+i+')">Del · 삭제</button></div>';
+    if(role==='admin') h+='<div style="display:flex;gap:4px"><button class="btn-sm btn-edit" onclick="openEdit(\''+r._sid+'\')">Edit · 수정</button><button class="btn-sm btn-del" onclick="delRec(\''+r._sid+'\')">Del · 삭제</button></div>';
     h+='</div>';
   });
   el.innerHTML=h;
@@ -1301,20 +1310,20 @@ function bAddedList(){
 ═══════════════════════════════════════════════════════════ */
 function eUCls(){ var g=document.getElementById('e-grade').value, s=document.getElementById('e-class'); s.innerHTML='<option value="">Select</option>'; (CM[g]||[]).forEach(function(c){var o=document.createElement('option');o.value=c;o.textContent=c;s.appendChild(o);}); }
 function eCb(cb){ var l=cb.closest('label'); if(cb.checked) l.classList.add('on'); else l.classList.remove('on'); }
-function openEdit(idx){
-  editIdx=idx; var r=recs[idx];
+function openEdit(sid){
+  editSid=sid; var r=recBySid(sid);
   document.getElementById('edit-title').textContent='Edit · 수정 — '+r.name;
   document.getElementById('e-grade').value=r.grade; eUCls(); document.getElementById('e-class').value=r.cls;
   document.getElementById('e-name').value=r.name; document.getElementById('e-givenby').value=r.givenBy;
   document.getElementById('e-date').value=r.date; document.getElementById('e-period').value=r.period;
-  var mr=mrows.find(function(m){return m.recIdx===idx;}); document.getElementById('e-mdate').value=mr?mr.date:'';
+  var mr=mrows.find(function(m){return m.detId===sid && m.status==='active';}); document.getElementById('e-mdate').value=mr?mr.date:'';
   document.getElementById('e-detail').value=r.detail||'';
   document.querySelectorAll('#e-rg input').forEach(function(cb){cb.checked=r.reasons.indexOf(cb.value)!==-1; var l=cb.closest('label'); if(cb.checked)l.classList.add('on');else l.classList.remove('on');});
   openModal('edit-modal');
 }
 async function saveEdit(){
-  if(editIdx<0) return;
-  var r=recs[editIdx];
+  if(!editSid) return;
+  var r=recBySid(editSid);
   r.grade=document.getElementById('e-grade').value; r.cls=document.getElementById('e-class').value;
   r.name=document.getElementById('e-name').value.trim(); r.givenBy=document.getElementById('e-givenby').value.trim();
   r.date=document.getElementById('e-date').value; r.period=document.getElementById('e-period').value;
@@ -1324,7 +1333,7 @@ async function saveEdit(){
   if(nd && send && nd>send){ alert('MD 날짜가 학기 종료일 이후입니다. · MD date is past semester end.'); return; }
   var dres = await sb.from('detentions').update({student_name:r.name, grade:r.grade, class:r.cls, given_by:r.givenBy, issue_date:r.date, period:r.period, reasons:r.reasons, detail:r.detail}).eq('id', r._sid);
   if(dres.error){ sbErr(dres.error); return; }
-  var mr=mrows.find(function(m){return m.recIdx===editIdx;});
+  var mr=mrows.find(function(m){return m.detId===editSid && m.status==='active';});
   if(mr&&nd){
     mr.date=nd;
     var ures = await sb.from('md_rows').update({md_date:nd}).eq('id', mr._sid);
@@ -1332,101 +1341,103 @@ async function saveEdit(){
   } else if(nd){
     var ires = await sb.from('md_rows').insert({detention_id:r._sid, md_date:nd, status:'active'}).select().single();
     if(ires.error){ sbErr(ires.error); return; }
-    mrows.push({recIdx:editIdx,date:nd,status:'active',rowId:nrid++,_sid:ires.data.id,attended:false,packetOnTime:false,packetAfterHours:false,supervisor:''});
+    mrows.push({detId:editSid,date:nd,status:'active',rowId:nrid++,_sid:ires.data.id,attended:false,packetOnTime:false,packetAfterHours:false,supervisor:''});
   }
   closeModal('edit-modal'); bAll(); bAddedList();
 }
-async function delRec(idx){
+async function delRec(sid){
   if(!confirm('이 기록을 삭제할까요?')) return;
-  var rec=recs[idx];
+  var rec=recBySid(sid); if(!rec) return;
   var res = await sb.from('detentions').delete().eq('id', rec._sid);
   if(res.error){ sbErr(res.error); return; }
-  recs.splice(idx,1); mrows=mrows.filter(function(m){return m.recIdx!==idx;});
-  mrows.forEach(function(m){if(m.recIdx>idx)m.recIdx--;}); bAll(); bAddedList();
+  recs=recs.filter(function(r){return r._sid!==sid;}); mrows=mrows.filter(function(m){return m.detId!==sid;});
+  bAll(); bAddedList();
 }
 
 /* ═══════════════════════════════════════════════════════════
    SKIP / EXCUSED
 ═══════════════════════════════════════════════════════════ */
 function fRow(id){ for(var i=0;i<mrows.length;i++){if(mrows[i].rowId===id)return i;} return -1; }
-async function hSkip(id){
-  var i=fRow(id); if(i===-1)return; var row=mrows[i]; if(row.status!=='active')return;
-  var r0 = await sb.from('md_rows').update({status:'skipped'}).eq('id', row._sid);
-  if(r0.error){ sbErr(r0.error); return; }
-  row.status='skipped';
-  var sd=row.date, re=nextFree(dAdd(sd,1));
-  var u={};
-  if(re){
-    var ins1 = await sb.from('md_rows').insert({detention_id:recs[row.recIdx]._sid, md_date:re, status:'active', rescheduled_from:row._sid}).select().single();
-    if(ins1.error){ sbErr(ins1.error); return; }
-    var reId=nrid++; mrows.splice(i+1,0,{recIdx:row.recIdx,date:re,status:'active',rowId:reId,_sid:ins1.data.id,attended:false,packetOnTime:false,packetAfterHours:false,supervisor:''}); u.reRowId=reId;
-  }
-  var orig=recs[row.recIdx];
-  var autoRec={name:orig.name,grade:orig.grade,cls:orig.cls,givenBy:'auto',date:sd,period:'ETC',reasons:['MD Skip'],detail:fmt(sd)+'('+sd+') MD를 결석(스킵)하여 자동 발급됨 · Auto-issued for skipping the '+fmt(sd)+' MD',isAuto:true};
-  var dins = await sb.from('detentions').insert({student_name:autoRec.name, grade:autoRec.grade, class:autoRec.cls, given_by:autoRec.givenBy, issue_date:autoRec.date, period:autoRec.period, reasons:autoRec.reasons, detail:autoRec.detail, is_auto:true}).select().single();
-  if(dins.error){ sbErr(dins.error); return; }
-  autoRec._sid=dins.data.id;
-  var vi=recs.length; recs.push(autoRec);
-  u.autoRecIdx=vi;
-  var autoMd=re?nextFree(dAdd(re,1)):'';
-  if(autoMd){
-    var ins2 = await sb.from('md_rows').insert({detention_id:autoRec._sid, md_date:autoMd, status:'active'}).select().single();
-    if(ins2.error){ sbErr(ins2.error); return; }
-    var autoRowId=nrid++; mrows.push({recIdx:vi,date:autoMd,status:'active',rowId:autoRowId,_sid:ins2.data.id,attended:false,packetOnTime:false,packetAfterHours:false,supervisor:''}); u.autoRowId=autoRowId;
-  }
-  row.undo=u;
-  if(!re||!autoMd) alert('학기 내 남은 등교일이 부족하여 일부 MD는 배정되지 않았습니다 (기록만 저장).\n· Not enough school days left this semester — some MDs saved as record only.');
-  bAll();
+function recBySid(sid){ return recs.find(function(r){return r._sid===sid;}); }
+var busyRows={};
+async function hSkip(id,btn){
+  if(busyRows[id]) return; busyRows[id]=true; if(btn) btn.disabled=true;
+  try{
+    var i=fRow(id); if(i===-1)return; var row=mrows[i]; if(row.status!=='active')return;
+    var r0 = await sb.from('md_rows').update({status:'skipped'}).eq('id', row._sid);
+    if(r0.error){ sbErr(r0.error); return; }
+    row.status='skipped';
+    var orig=recBySid(row.detId);
+    var sd=row.date, re=nextFree(dAdd(sd,1), orig.name, orig.cls);
+    if(re){
+      var ins1 = await sb.from('md_rows').insert({detention_id:orig._sid, md_date:re, status:'active', rescheduled_from:row._sid}).select().single();
+      if(ins1.error){ sbErr(ins1.error); return; }
+      mrows.splice(i+1,0,{detId:orig._sid,date:re,status:'active',rowId:nrid++,_sid:ins1.data.id,resFrom:row._sid,attended:false,packetOnTime:false,packetAfterHours:false,supervisor:''});
+    }
+    var autoRec={name:orig.name,grade:orig.grade,cls:orig.cls,givenBy:'auto',date:sd,period:'ETC',reasons:['MD Skip'],detail:fmt(sd)+'('+sd+') MD를 결석(스킵)하여 자동 발급됨 · Auto-issued for skipping the '+fmt(sd)+' MD',isAuto:true};
+    var dins = await sb.from('detentions').insert({student_name:autoRec.name, grade:autoRec.grade, class:autoRec.cls, given_by:autoRec.givenBy, issue_date:autoRec.date, period:autoRec.period, reasons:autoRec.reasons, detail:autoRec.detail, is_auto:true}).select().single();
+    if(dins.error){ sbErr(dins.error); return; }
+    autoRec._sid=dins.data.id;
+    recs.push(autoRec);
+    var autoMd=re?nextFree(dAdd(re,1), orig.name, orig.cls):'';
+    if(autoMd){
+      var ins2 = await sb.from('md_rows').insert({detention_id:autoRec._sid, md_date:autoMd, status:'active', rescheduled_from:row._sid}).select().single();
+      if(ins2.error){ sbErr(ins2.error); return; }
+      mrows.push({detId:autoRec._sid,date:autoMd,status:'active',rowId:nrid++,_sid:ins2.data.id,resFrom:row._sid,attended:false,packetOnTime:false,packetAfterHours:false,supervisor:''});
+    }
+    if(!re||!autoMd) alert('학기 내 남은 등교일이 부족하여 일부 MD는 배정되지 않았습니다 (기록만 저장).\n· Not enough school days left this semester — some MDs saved as record only.');
+    bAll();
+  } finally { delete busyRows[id]; if(btn) btn.disabled=false; }
 }
 async function undoSkip(id){
   var i=fRow(id); if(i===-1)return; var row=mrows[i]; if(row.status!=='skipped')return;
   if(!confirm('Skip을 취소하고 원래 상태로 되돌릴까요? · Undo this skip?')) return;
-  var u=row.undo||{};
-  var reRow=mrows.find(function(m){return m.rowId===u.reRowId;});
+  var linked=mrows.filter(function(m){ return m.resFrom===row._sid; });
+  var autoDetSid=null;
+  linked.forEach(function(m){ var r=recBySid(m.detId); if(r && r.isAuto) autoDetSid=r._sid; });
   var ops=[];
-  if(reRow) ops.push(sb.from('md_rows').delete().eq('id', reRow._sid));
-  if(typeof u.autoRecIdx==='number' && recs[u.autoRecIdx] && recs[u.autoRecIdx].isAuto){
-    ops.push(sb.from('detentions').delete().eq('id', recs[u.autoRecIdx]._sid));
-  }
+  linked.forEach(function(m){ if(m.detId!==autoDetSid) ops.push(sb.from('md_rows').delete().eq('id', m._sid)); });
+  if(autoDetSid) ops.push(sb.from('detentions').delete().eq('id', autoDetSid));
   var ures = await sb.from('md_rows').update({status:'active'}).eq('id', row._sid);
   if(ures.error){ sbErr(ures.error); return; }
   var results = await Promise.all(ops);
   var errored=results.find(function(r){return r&&r.error;});
   if(errored){ sbErr(errored.error); return; }
-  // remove rescheduled row + auto-detention row
-  mrows=mrows.filter(function(m){ return m.rowId!==u.reRowId && m.rowId!==u.autoRowId; });
-  // remove auto MD Skip record (reindex)
-  if(typeof u.autoRecIdx==='number' && recs[u.autoRecIdx] && recs[u.autoRecIdx].isAuto){
-    recs.splice(u.autoRecIdx,1);
-    mrows.forEach(function(m){ if(m.recIdx>u.autoRecIdx) m.recIdx--; });
+  var linkedIds=linked.map(function(m){return m.rowId;});
+  mrows=mrows.filter(function(m){ return linkedIds.indexOf(m.rowId)===-1; });
+  if(autoDetSid){
+    recs=recs.filter(function(r){return r._sid!==autoDetSid;});
   }
-  row.status='active'; delete row.undo;
+  row.status='active';
   bAll();
 }
 async function undoExc(id){
   var i=fRow(id); if(i===-1)return; var row=mrows[i]; if(row.status!=='excused')return;
   if(!confirm('Excused를 취소하고 원래 상태로 되돌릴까요? · Undo?')) return;
-  var u=row.undo||{};
-  var reRow=mrows.find(function(m){return m.rowId===u.reRowId;});
+  var reRow=mrows.find(function(m){return m.resFrom===row._sid;});
   var ures = await sb.from('md_rows').update({status:'active'}).eq('id', row._sid);
   if(ures.error){ sbErr(ures.error); return; }
   if(reRow){ var dres=await sb.from('md_rows').delete().eq('id', reRow._sid); if(dres.error){ sbErr(dres.error); return; } }
-  mrows=mrows.filter(function(m){ return m.rowId!==u.reRowId; });
-  row.status='active'; delete row.undo;
+  if(reRow) mrows=mrows.filter(function(m){ return m.rowId!==reRow.rowId; });
+  row.status='active';
   bAll();
 }
-async function hExc(id){
-  var i=fRow(id); if(i===-1)return; var row=mrows[i]; if(row.status!=='active')return;
-  var ures = await sb.from('md_rows').update({status:'excused'}).eq('id', row._sid);
-  if(ures.error){ sbErr(ures.error); return; }
-  row.status='excused';
-  var re2=nextFree(dAdd(row.date,1));
-  if(re2){
-    var ins = await sb.from('md_rows').insert({detention_id:recs[row.recIdx]._sid, md_date:re2, status:'active', rescheduled_from:row._sid}).select().single();
-    if(ins.error){ sbErr(ins.error); return; }
-    var reId2=nrid++; mrows.splice(i+1,0,{recIdx:row.recIdx,date:re2,status:'active',rowId:reId2,_sid:ins.data.id,attended:false,packetOnTime:false,packetAfterHours:false,supervisor:''}); row.undo={reRowId:reId2};
-  } else { row.undo={}; alert('학기 내 남은 등교일이 없어 재배정 없이 처리되었습니다.\n· No school days left this semester — no reschedule.'); }
-  bAll();
+async function hExc(id,btn){
+  if(busyRows[id]) return; busyRows[id]=true; if(btn) btn.disabled=true;
+  try{
+    var i=fRow(id); if(i===-1)return; var row=mrows[i]; if(row.status!=='active')return;
+    var ures = await sb.from('md_rows').update({status:'excused'}).eq('id', row._sid);
+    if(ures.error){ sbErr(ures.error); return; }
+    row.status='excused';
+    var orig=recBySid(row.detId);
+    var re2=nextFree(dAdd(row.date,1), orig.name, orig.cls);
+    if(re2){
+      var ins = await sb.from('md_rows').insert({detention_id:orig._sid, md_date:re2, status:'active', rescheduled_from:row._sid}).select().single();
+      if(ins.error){ sbErr(ins.error); return; }
+      mrows.splice(i+1,0,{detId:orig._sid,date:re2,status:'active',rowId:nrid++,_sid:ins.data.id,resFrom:row._sid,attended:false,packetOnTime:false,packetAfterHours:false,supervisor:''});
+    } else { alert('학기 내 남은 등교일이 없어 재배정 없이 처리되었습니다.\n· No school days left this semester — no reschedule.'); }
+    bAll();
+  } finally { delete busyRows[id]; if(btn) btn.disabled=false; }
 }
 function markDirty(rowId){
   var i=fRow(rowId); if(i===-1) return;
@@ -1448,8 +1459,10 @@ function setPacket(rowId, which, checked){
   var onTime = which==='onTime' ? checked : (checked ? false : row.packetOnTime);
   var afterHours = which==='afterHours' ? checked : (checked ? false : row.packetAfterHours);
   row.packetOnTime=onTime; row.packetAfterHours=afterHours;
+  var onEl=document.getElementById('pkt-on-'+rowId), afEl=document.getElementById('pkt-af-'+rowId);
+  if(onEl) onEl.checked=onTime;
+  if(afEl) afEl.checked=afterHours;
   markDirty(rowId);
-  bRoster();
 }
 async function saveRow(rowId){
   var i=fRow(rowId); if(i===-1) return;
@@ -1466,22 +1479,21 @@ function clearFilter(){ document.getElementById('f-date-filter').value=''; bRost
    HISTORY MODAL
 ═══════════════════════════════════════════════════════════ */
 function openHist(name){
-  var myRecs=recs.map(function(r,i){return{r:r,i:i};}).filter(function(x){return x.r.name===name;});
+  var myRecs=recs.filter(function(r){return r.name===name;});
   document.getElementById('hist-title').textContent=name+' — History · 전체 기록 ('+myRecs.length+'건)';
   var total=myRecs.length, ai=getAI(total,name);
   document.getElementById('hist-stats').innerHTML=
     '<div class="stat-card"><div><div class="stat-val">'+total+'</div><div class="stat-lbl">Total · 전체 건수</div></div></div>'+
-    '<div class="stat-card"><div><div class="stat-val">'+myRecs.filter(function(x){return !x.r.isAuto;}).length+'</div><div class="stat-lbl">Actual · 실제 발급</div></div></div>'+
+    '<div class="stat-card"><div><div class="stat-val">'+myRecs.filter(function(r){return !r.isAuto;}).length+'</div><div class="stat-lbl">Actual · 실제 발급</div></div></div>'+
     '<div class="stat-card"><div><div style="margin:4px 0"><span class="ab '+ai.cls+'">'+ai.lbl+'</span></div><div class="stat-lbl">Status · 현재 상태</div></div></div>';
   var h='';
-  myRecs.sort(function(a,b){return a.r.date<b.r.date?-1:1;}).forEach(function(x,seq){
-    var r=x.r, idx=x.i;
+  myRecs.sort(function(a,b){return a.date<b.date?-1:1;}).forEach(function(r,seq){
     var bdg=r.reasons.map(function(rs){return '<span class="pill '+(rs==='MD Skip'?'p-sk':'p-ac')+'">'+rs+'</span>';}).join(' ');
     h+='<div class="hist-row"><div class="hist-dot'+(r.isAuto?' auto':'')+'"></div><div style="flex:1">'+
       '<div style="font-size:13px;font-weight:600">#'+(seq+1)+' · '+r.date+(r.period?' · P'+r.period:'')+'</div>'+
       '<div style="font-size:11px;color:var(--t3);margin:2px 0">'+(r.givenBy||'—')+(r.recordedBy?' · Recorded by · 기록: '+r.recordedBy:'')+(r.detail?' · '+r.detail:'')+'</div>'+
       '<div style="margin:4px 0">'+bdg+'</div>'+
-      (role==='admin'&&!r.isAuto?'<div style="display:flex;gap:4px;margin-top:6px"><button class="btn-sm btn-edit" onclick="closeModal(\'hist-modal\');openEdit('+idx+')">Edit · 수정</button><button class="btn-sm btn-del" onclick="closeModal(\'hist-modal\');delRec('+idx+')">Delete · 삭제</button></div>':'')+
+      (role==='admin'&&!r.isAuto?'<div style="display:flex;gap:4px;margin-top:6px"><button class="btn-sm btn-edit" onclick="closeModal(\'hist-modal\');openEdit(\''+r._sid+'\')">Edit · 수정</button><button class="btn-sm btn-del" onclick="closeModal(\'hist-modal\');delRec(\''+r._sid+'\')">Delete · 삭제</button></div>':'')+
     '</div></div>';
   });
   document.getElementById('hist-body').innerHTML=h||'<div class="empty-msg">기록 없음 · No records</div>';
@@ -1506,7 +1518,7 @@ function setNC(pid,nid,lid,pgid,cid,off,tot,per,lblFn){
 ═══════════════════════════════════════════════════════════ */
 function stScroll(d){ stOff+=d*ST_PER; var mx=Math.max(0,stDates.length-ST_PER); if(stOff<0)stOff=0; if(stOff>mx)stOff=mx; rStTbl(); }
 function bStatus(){
-  var dates=[]; recs.forEach(function(r){if(dates.indexOf(r.date)===-1)dates.push(r.date);}); dates.sort();
+  var dates=[]; mrows.forEach(function(m){if(dates.indexOf(m.date)===-1)dates.push(m.date);}); dates.sort();
   stDates=dates; stOff=Math.max(0,dates.length-ST_PER);
   if(!dates.length){ document.getElementById('st-tbl').style.display='none'; document.getElementById('st-empty').style.display='block'; document.getElementById('st-ctrl').style.display='none'; return; }
   document.getElementById('st-empty').style.display='none';
@@ -1531,7 +1543,7 @@ function rStTbl(){
     var ttd=document.createElement('td'); ttd.className='tc';
     ttd.innerHTML='<span class="'+getCCls(tot)+'">'+tot+'</span>';
     tr.appendChild(ttd);
-    vis.forEach(function(d){ var rs=recs.filter(function(r){return r.name===pts[0]&&r.date===d;}); P.forEach(function(p){ var td=document.createElement('td');td.className='tc'; rs.filter(function(r){return r.period===p;}).forEach(function(rec){ var tip=rec.reasons.join(', ')||p, sp=document.createElement('span'); if(rec.isAuto){sp.className='mark mk-sk';}else if(p==='HR'){sp.className='mark mk-hr';}else if(p==='ETC'){sp.className='mark mk-etc';}else{sp.className='mark mk-p';} sp.innerHTML=(p==='HR'?'HR':(p==='ETC'?'E':(rec.isAuto?'S':p)))+'<span class="tip">'+tip+'</span>'; td.appendChild(sp); }); tr.appendChild(td); }); });
+    vis.forEach(function(d){ var rws=mrows.filter(function(m){ var r=recBySid(m.detId); return m.date===d && r && r.name===pts[0]; }); P.forEach(function(p){ var td=document.createElement('td');td.className='tc'; rws.filter(function(m){return recBySid(m.detId).period===p;}).forEach(function(m){ var rec=recBySid(m.detId); var tip=rec.reasons.join(', ')||p, sp=document.createElement('span'); if(rec.isAuto){sp.className='mark mk-sk';}else if(p==='HR'){sp.className='mark mk-hr';}else if(p==='ETC'){sp.className='mark mk-etc';}else{sp.className='mark mk-p';} sp.innerHTML=(p==='HR'?'HR':(p==='ETC'?'E':(rec.isAuto?'S':p)))+'<span class="tip">'+tip+'</span>'; td.appendChild(sp); }); tr.appendChild(td); }); });
     tb.appendChild(tr);
   });
 }
@@ -1539,39 +1551,36 @@ function rStTbl(){
 /* ═══════════════════════════════════════════════════════════
    PAGE 3: MD ROSTER
 ═══════════════════════════════════════════════════════════ */
-function roScroll(d){ roOff+=d*RO_PER; bRoster(); }
 function roJumpToday(){
   var t=new Date().toISOString().split('T')[0];
   var sorted=mrows.slice().sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:a.rowId-b.rowId;});
-  var idx=-1;
-  for(var i=0;i<sorted.length;i++){ if(sorted[i].date>=t){ idx=i; break; } }
-  roOff = idx<0 ? Math.max(0,sorted.length-RO_PER) : idx;
+  var target=null;
+  for(var i=0;i<sorted.length;i++){ if(sorted[i].date>=t){ target=sorted[i]; break; } }
+  if(!target && sorted.length) target=sorted[sorted.length-1];
+  if(target){ var el=document.getElementById('ro-row-'+target.rowId); if(el) el.scrollIntoView({block:'center'}); }
 }
 function bRoster(){
   var fd=document.getElementById('f-date-filter').value;
   var sorted=mrows.slice().sort(function(a,b){return a.date<b.date?-1:a.date>b.date?1:a.rowId-b.rowId;});
   var filtered=fd?sorted.filter(function(r){return r.date===fd;}):sorted;
   document.getElementById('fcnt').textContent=fd?'('+filtered.length+'명)':'(전체 '+filtered.length+'명)';
-  var mx=Math.max(0,filtered.length-RO_PER); if(roOff<0)roOff=0; if(roOff>mx)roOff=mx;
-  setNC('ro-prev','ro-next','ro-lbl','ro-pg','ro-ctrl',roOff,filtered.length,RO_PER,function(){ var sl=filtered.slice(roOff,roOff+RO_PER); return sl.length?fmt(sl[0].date)+' ~ '+fmt(sl[sl.length-1].date):''; });
   // update badge
   var activeTot=mrows.filter(function(r){return r.status==='active';}).length;
   var badge=document.getElementById('nb-badge'); badge.textContent=activeTot; badge.style.display=activeTot>0?'inline':'none';
-  var page=filtered.slice(roOff,roOff+RO_PER);
   var tb=document.getElementById('ro-body'); tb.innerHTML='';
   if(!filtered.length){ tb.innerHTML='<tr><td colspan="10" class="empty-msg">'+(fd?'No students on this date · 해당 날짜에 등록된 학생이 없습니다':'No records yet · 기록이 없습니다')+'</td></tr>'; return; }
-  page.forEach(function(row){
-    var r=recs[row.recIdx], done=row.status!=='active', auto=r.isAuto;
+  filtered.forEach(function(row){
+    var r=recBySid(row.detId), done=row.status!=='active', auto=r.isAuto;
     var bdg=r.reasons.map(function(x){return '<span class="pill '+(x==='MD Skip'?'p-sk':'p-ac')+'">'+x+'</span>';}).join(' ');
     if(r.detail) bdg+='<div style="font-size:10px;color:var(--t3);margin-top:2px">'+r.detail+'</div>';
-    var tr=document.createElement('tr'); tr.className=row.status==='skipped'?'row-sk':row.status==='excused'?'row-ex':'hover-row';
+    var tr=document.createElement('tr'); tr.id='ro-row-'+row.rowId; tr.className=row.status==='skipped'?'row-sk':row.status==='excused'?'row-ex':'hover-row';
     var dh='<span'+(done?' style="text-decoration:line-through;opacity:.55"':'')+'>'+fmt(row.date)+'</span>';
     if(row.status==='skipped') dh+=' <span class="badge-sk">Skipped · 스킵</span>';
     if(row.status==='excused') dh+=' <span class="badge-ex">Excused · 인정</span>';
-    var editBtn=(role==='admin'&&!auto)?'<button class="btn-sm btn-edit" onclick="openEdit('+row.recIdx+')">Edit · 수정</button>':'';
-    var delBtn='<button class="btn-sm btn-del" onclick="delRec('+row.recIdx+')">Del · 삭제</button>';
+    var editBtn=(role==='admin'&&!auto)?'<button class="btn-sm btn-edit" onclick="openEdit(\''+row.detId+'\')">Edit · 수정</button>':'';
+    var delBtn='<button class="btn-sm btn-del" onclick="delRec(\''+row.detId+'\')">Del · 삭제</button>';
     var saveBtn=done?'':'<button class="btn-sm btn-save'+(row._dirty?' dirty':'')+'" id="sv-'+row.rowId+'" onclick="saveRow('+row.rowId+')">Save · 저장</button>';
-    var ah=row.status==='skipped'?'<button class="btn-sm" onclick="undoSkip('+row.rowId+')">↩ Undo · 되돌리기</button>':row.status==='excused'?'<button class="btn-sm" onclick="undoExc('+row.rowId+')">↩ Undo · 되돌리기</button>':done?'—':'<div style="display:flex;gap:4px;justify-content:center"><button class="btn-sm btn-skip" onclick="hSkip('+row.rowId+')">Skip</button><button class="btn-sm btn-exc" onclick="hExc('+row.rowId+')">Excused</button></div>';
+    var ah=row.status==='skipped'?'<button class="btn-sm" onclick="undoSkip('+row.rowId+')">↩ Undo · 되돌리기</button>':row.status==='excused'?'<button class="btn-sm" onclick="undoExc('+row.rowId+')">↩ Undo · 되돌리기</button>':done?'—':'<div style="display:flex;gap:4px;justify-content:center"><button class="btn-sm btn-skip" onclick="hSkip('+row.rowId+',this)">Skip</button><button class="btn-sm btn-exc" onclick="hExc('+row.rowId+',this)">Excused</button></div>';
     ah='<div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap">'+editBtn+saveBtn+ah+delBtn+'</div>';
     tr.innerHTML='<td style="white-space:nowrap">'+dh+'</td>'+
       '<td><span class="name-link" onclick="openHist(\''+r.name+'\')">'+r.name+'</span>'+(auto?' <span class="auto-tag">(auto)</span>':'')+'</td>'+
@@ -1579,8 +1588,8 @@ function bRoster(){
       '<td>'+bdg+'</td>'+
       '<td style="font-size:11px">'+(auto?'<span class="auto-tag">auto</span>':(r.givenBy||'—'))+'</td>'+
       '<td class="tc">'+(done?'—':'<input type="checkbox" data-att="1" '+(row.attended?'checked':'')+' onchange="setAttended('+row.rowId+',this.checked)" style="width:14px;height:14px;accent-color:var(--gr)">')+'</td>'+
-      '<td class="tc">'+(done?'—':'<input type="checkbox" '+(row.packetOnTime?'checked':'')+' onchange="setPacket('+row.rowId+',\'onTime\',this.checked)" style="width:14px;height:14px;accent-color:var(--gr)">')+'</td>'+
-      '<td class="tc">'+(done?'—':'<input type="checkbox" '+(row.packetAfterHours?'checked':'')+' onchange="setPacket('+row.rowId+',\'afterHours\',this.checked)" style="width:14px;height:14px;accent-color:var(--gr)">')+'</td>'+
+      '<td class="tc">'+(done?'—':'<input type="checkbox" id="pkt-on-'+row.rowId+'" '+(row.packetOnTime?'checked':'')+' onchange="setPacket('+row.rowId+',\'onTime\',this.checked)" style="width:14px;height:14px;accent-color:var(--gr)">')+'</td>'+
+      '<td class="tc">'+(done?'—':'<input type="checkbox" id="pkt-af-'+row.rowId+'" '+(row.packetAfterHours?'checked':'')+' onchange="setPacket('+row.rowId+',\'afterHours\',this.checked)" style="width:14px;height:14px;accent-color:var(--gr)">')+'</td>'+
       '<td class="tc">'+ah+'</td>'+
       '<td>'+(done?'—':'<input type="text" placeholder="Name · 이름" value="'+(row.supervisor||'').replace(/"/g,'&quot;')+'" oninput="setSupervisor('+row.rowId+',this.value)" style="font-size:11px;height:26px">')+'</td>';
     tb.appendChild(tr);
@@ -1631,10 +1640,10 @@ async function loadAllData(){
   if(detRes.error) throw detRes.error;
   if(mdRes.error) throw mdRes.error;
   recs = (detRes.data||[]).map(function(r){ return {_sid:r.id, name:r.student_name, grade:r.grade, cls:r.class, givenBy:r.given_by, recordedBy:r.recorded_by, date:r.issue_date, period:r.period, reasons:r.reasons||[], detail:r.detail, isAuto:r.is_auto}; });
-  var idIdx={}; recs.forEach(function(r,i){ idIdx[r._sid]=i; });
+  var sidSet={}; recs.forEach(function(r){ sidSet[r._sid]=true; });
   nrid=0;
-  mrows = (mdRes.data||[]).filter(function(r){ return idIdx[r.detention_id]!==undefined; }).map(function(r){
-    return {_sid:r.id, recIdx:idIdx[r.detention_id], date:r.md_date, status:r.status, attended:!!r.attended, packetOnTime:!!r.packet_on_time, packetAfterHours:!!r.packet_after_hours, supervisor:r.supervisor||'', rowId:nrid++};
+  mrows = (mdRes.data||[]).filter(function(r){ return sidSet[r.detention_id]; }).map(function(r){
+    return {_sid:r.id, detId:r.detention_id, date:r.md_date, status:r.status, attended:!!r.attended, packetOnTime:!!r.packet_on_time, packetAfterHours:!!r.packet_after_hours, supervisor:r.supervisor||'', resFrom:r.rescheduled_from||null, rowId:nrid++};
   });
 
   if(archRes.error) throw archRes.error;
