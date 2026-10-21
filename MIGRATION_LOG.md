@@ -22,13 +22,16 @@
 |---|---|---|---|
 | 0 | 백업 | Claude / 사용자 | ✅ 완료 (Detention 테이블은 SQL Editor CSV로) |
 | 1 | 새 Supabase 프로젝트 생성 (기존과 같은 Region, 무료 플랜 2개 제한 확인, DB 비밀번호 보관) | 사용자 | ✅ 2026-10-13 — `lvhyatyjnycyilbzmuwx` |
-| 2 | 새 프로젝트에 Detention 스키마 구성 (`supabase_schema.sql` + `migrations/`, 실제 운영 DB와 비교) | Claude가 SQL 준비 → 사용자가 SQL Editor에서 실행 | 🟡 SQL 준비됨: `migrations/2026-10-13_newproject_step2_schema.sql` |
-| 3 | 데이터 이전: 테이블 6+1개, 계정 18개 (기존 비밀번호 해시·ID 그대로 → 교사들은 차이 못 느낌) | Claude가 SQL 준비 → 사용자 실행 | 🟡 SQL 준비됨: 백업 폴더 `detention_step3_data.sql` (비밀번호 해시 포함 — 배포 폴더에 두지 말 것) |
-| 4 | `index.html`의 SUPABASE_URL / ANON_KEY 교체 + `vercel.json` CSP connect-src 교체 → Vercel 재배포 | Claude 수정, 사용자 배포 | ⬜ |
+| 2 | 새 프로젝트에 Detention 스키마 구성 (`supabase_schema.sql` + `migrations/`, 실제 운영 DB와 비교) | Claude가 SQL 준비 → 사용자가 SQL Editor에서 실행 | ✅ 2026-10-13 — `migrations/2026-10-13_newproject_step2_schema.sql` |
+| 3 | 데이터 이전: 테이블 6+1개, 계정 18개 (기존 비밀번호 해시·ID 그대로 → 교사들은 차이 못 느낌) | Claude가 SQL 준비 → 사용자 실행 | ✅ 2026-10-13 — 백업 폴더 `detention_step3_data.sql` (비밀번호 해시 포함 — 배포 폴더에 두지 말 것) |
+| 4 | `index.html`의 SUPABASE_URL / ANON_KEY 교체 + `vercel.json` CSP connect-src 교체 → Vercel 재배포 | Claude 수정, 사용자 배포 | ✅ 2026-10-13 — 커밋 3b2920c |
 | 5 | 검증: 교사 로그인·데이터 확인 | 사용자 | ⬜ |
-| 6 | (안정화 후) 기존 프로젝트에서 Detention 테이블·함수·트리거·계정 18개 정리 | Claude가 SQL 준비 → 사용자 실행 | ⬜ |
+| 6 | (안정화 후) 기존 프로젝트에서 Detention 테이블·함수·트리거·계정 18개 정리 | Claude가 SQL 준비 → 사용자 실행 | ✅ 2026-10-21 — `migrations/2026-10-21_oldproject_step6_cleanup.sql` |
 
-6단계 전까지 기존 프로젝트는 그대로이므로, 문제가 생기면 `index.html` 두 줄만
+**2026-10-21: 이전 완료.** 기존 프로젝트에는 이제 Detention 흔적이 없음 (Haven 전용).
+아래 "되돌리기"는 6단계 이후로는 쓸 수 없음 — 옛 프로젝트에 테이블·계정이 없음.
+
+(기록용) 6단계 전까지는 기존 프로젝트가 그대로였으므로, 문제가 생기면 `index.html` 두 줄만
 되돌리면 원상복구됨.
 
 ## 0. 백업 현황
@@ -72,6 +75,11 @@
 
 ## 다음에 할 일
 
-1. push → Vercel 배포 확인
+1. ✅ push 완료 (3b2920c) → Vercel 배포 성공, 라이브 사이트가 새 프로젝트 사용 확인 (2026-10-13)
 2. 5단계 검증: Admin + 교사 1명 로그인, 디텐션 목록·MD 날짜 확인, 테스트 기록 1건
 3. (며칠 안정화 후) 6단계: 기존 프로젝트 정리 SQL — heewon.kye 계정은 지우지 말고 Detention 프로필만 삭제
+   - 2026-10-21 SQL 준비: `migrations/2026-10-21_oldproject_step6_cleanup.sql` (옛 프로젝트에서 실행).
+     한 트랜잭션 + 안전장치(행 수 166/153/231, hmd- 계정 18개, Haven 프로필 없음, 트리거가
+     public.handle_new_user일 때만 삭제). haven-web은 public 스키마를 쓰지 않음을 확인함.
+   - ✅ 2026-10-21 사용자 실행 완료 — 미리보기·확인 결과 모두 예상대로 (public 테이블/함수 0,
+     hmd- 계정 0, auth.users 트리거는 haven_on_auth_user_created 하나만 남음)
